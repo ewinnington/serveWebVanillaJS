@@ -1,16 +1,19 @@
+const viewport = document.getElementById('viewport');
 const hexgrid = document.getElementById('hexgrid');
 const directionInput = document.getElementById('direction');
 const speedInput = document.getElementById('speed');
 const turnInput = document.getElementById('turn');
+const zoomLevelDisplay = document.getElementById('zoom-level');
 
-const gridSize = 8; // Change to 8 tiles wide
+const gridSizeHeight = 100;
+const gridSizeWidth = 150;
 const hexHeight = 52;
 const hexWidth = 60;
-const hexes = [];
+let zoomLevel = 1;
 
 // Create hex grid
-for (let row = 0; row < gridSize; row++) {
-    for (let col = 0; col < gridSize; col++) {
+for (let row = 0; row < gridSizeHeight; row++) {
+    for (let col = 0; col < gridSizeWidth; col++) {
         const hex = document.createElement('div');
         hex.classList.add('hex');
         hex.dataset.row = row;
@@ -20,7 +23,6 @@ for (let row = 0; row < gridSize; row++) {
         hex.style.top = `${row * hexHeight + (col % 2 === 0 ? 0 : hexHeight / 2)}px`;
         hex.addEventListener('click', () => handleHexClick(row, col));
         hexgrid.appendChild(hex);
-        hexes.push(hex);
     }
 }
 
@@ -82,12 +84,12 @@ function calculateReachable(hex, speed, turn_number, moved, remaining_moves, cur
 }
 
 function isValidHex(hex) {
-    return hex[1] >= 0 && hex[1] < gridSize && hex[0] >= 0 && hex[0] < gridSize;
+    return hex[1] >= 0 && hex[1] < gridSizeHeight && hex[0] >= 0 && hex[0] < gridSizeWidth;
 }
 
 function handleHexClick(row, col) {
     // Clear previous highlights
-    hexes.forEach(hex => hex.classList.remove('blue', 'yellow', 'green'));
+    document.querySelectorAll('.hex').forEach(hex => hex.classList.remove('blue', 'yellow', 'green'));
 
     // Mark the start hex
     const startHex = document.querySelector(`.hex[data-row='${row}'][data-col='${col}']`);
@@ -107,6 +109,47 @@ function handleHexClick(row, col) {
 
     // Mark the start hex again (to ensure it is not overwritten)
     startHex.classList.remove('yellow');
-    startHex.classList.remove('green');
     startHex.classList.add('blue');
+}
+
+
+// Function to update grid size based on zoom level
+function updateGridSize() {
+    newWidth = gridSizeWidth * hexWidth;
+    newHeight = gridSizeHeight * hexHeight;
+    hexgrid.style.width = `${newWidth}px`; // Total grid width at current zoom
+    hexgrid.style.height = `${newHeight}px`; // Total grid height at current zoom
+}
+
+// Function to set zoom level and keep the top-left corner at (0,0)
+function setZoom(newZoomLevel) {
+    zoomLevel = newZoomLevel;
+    
+    // Update the grid size based on the new zoom level
+    updateGridSize();
+    
+    // Apply the zoom transform
+    hexgrid.style.transform = `scale(${zoomLevel})`;
+    hexgrid.style.transformOrigin = 'top left';
+    
+    // Always reset the scroll position to top-left corner
+    viewport.scrollLeft = 0;
+    viewport.scrollTop = 0;
+
+    // Update the zoom level display
+    zoomLevelDisplay.textContent = `Zoom: ${Math.round(zoomLevel * 100)}%`;
+}
+
+// Event listener to handle mouse wheel zoom
+viewport.addEventListener('wheel', (event) => {
+    event.preventDefault();
+    const scaleAmount = 0.1;
+    if (event.deltaY < 0 && zoomLevel < 2) { // Zoom in
+        setZoom(zoomLevel + scaleAmount);
+    } else if (event.deltaY > 0 && zoomLevel > 0.5) { // Zoom out
+        setZoom(zoomLevel - scaleAmount);
     }
+});
+
+// Initialize zoom level
+setZoom(1);
