@@ -1,9 +1,14 @@
 const canvas = document.getElementById('hexgrid');
+const viewport = document.getElementById('canvas-container');
 const ctx = canvas.getContext('2d');
 const directionInput = document.getElementById('direction');
 const speedInput = document.getElementById('speed');
 const turnInput = document.getElementById('turn');
 const zoomLevelDisplay = document.getElementById('zoom-level');
+const firingDirectionInput = document.getElementById('firing-direction');
+const firingArcInput = document.getElementById('arc');
+const distanceInput = document.getElementById('distance');
+
 
 const gridSizeHeight = 100;
 const gridSizeWidth = 150;
@@ -19,8 +24,6 @@ canvas.height = gridSizeHeight * hexHeight * zoomLevel;
 
 // Cache for hexagon vertices
 const hexCache = {};
-let reachableHexes = new Map();
-let startHex = {};
 
 const nebulaCount = 200; // Number of nebula lights
 const nebulas = [];
@@ -104,8 +107,6 @@ function drawGrid() {
     ctx.scale(zoomLevel, zoomLevel);
     drawNebulas();
     
-
-
     // Determine the visible area
     const visibleWidth = canvas.width / zoomLevel;
     const visibleHeight = canvas.height / zoomLevel;
@@ -130,155 +131,180 @@ function drawGrid() {
     }
 
     ctx.restore();
-
-    if (startHex.hex && reachableHexes.size > 0) {
-        drawreachableHexes(reachableHexes, startHex);
-    }
-}
-
-function getNeighbor(hex, direction) {
-    const directions_even = [
-        [0, -1],   // N
-        [1, -1],   // NE
-        [1, 0],    // SE
-        [0, 1],    // S
-        [-1, 0],   // SW
-        [-1, -1]   // NW
-    ];
-
-    const directions_odd = [
-        [0, -1],   // N
-        [1, 0],    // NE
-        [1, 1],    // SE
-        [0, 1],    // S
-        [-1, 1],   // SW
-        [-1, 0]    // NW
-    ];
-
-    const [dCol, dRow] = hex[0] % 2 === 0 ? directions_even[direction] : directions_odd[direction];
-    return [hex[0] + dCol, hex[1] + dRow];
-}
-
-function calculateReachable(hex, speed, turn_number, moved, remaining_moves, current_direction, reachable = new Map()) {
-    const key = `${hex[0]},${hex[1]}`;
-    if (remaining_moves === 0) {
-        reachable.set(key, { hex, moved, remaining_moves, is_end: true });
-        return reachable;
-    }
-
-    if (!reachable.has(key) || reachable.get(key).is_end === false) {
-        reachable.set(key, { hex, moved, remaining_moves, is_end: remaining_moves === 0 });
-    }
-
-    const forward_hex = getNeighbor(hex, current_direction);
-    if (isValidHex(forward_hex)) {
-        calculateReachable(forward_hex, speed, turn_number, moved + 1, remaining_moves - 1, current_direction, reachable);
-    }
-
-    if ((moved % turn_number === 0) && (moved > 0)) {
-        const left_direction = (current_direction - 1 + 6) % 6;
-        const right_direction = (current_direction + 1) % 6;
-
-        const left_hex = getNeighbor(hex, left_direction);
-        if (isValidHex(left_hex)) {
-            calculateReachable(left_hex, speed, turn_number, moved + 1, remaining_moves - 1, left_direction, reachable);
-        }
-
-        const right_hex = getNeighbor(hex, right_direction);
-        if (isValidHex(right_hex)) {
-            calculateReachable(right_hex, speed, turn_number, moved + 1, remaining_moves - 1, right_direction, reachable);
-        }
-    }
-
-    return reachable;
-}
-
-
-function isValidHex(hex) {
-    return hex[1] >= 0 && hex[1] < gridSizeHeight && hex[0] >= 0 && hex[0] < gridSizeWidth;
-}
-
-function handleHexClick(row, col) {
-    //drawGrid();
-    removeReachableHexes(reachableHexes, startHex);
-    startHex = { hex: [col, row], moved: 0, remaining_moves: parseInt(speedInput.value), is_end: false };
-    const speed = parseInt(speedInput.value);
-    const turn_number = parseInt(turnInput.value);
-    const direction = parseInt(directionInput.value);
-
-    reachableHexes = calculateReachable([col, row], speed, turn_number, 0, speed, direction);
-
-    drawreachableHexes(reachableHexes, startHex);
 }
 
 function removeReachableHexes(reachableHexes, startHex) {
+    drawGrid();
+}
+
+function drawReachableHexes(reachableHexes, startHex) {
+    const full_hex = false;
+    if(full_hex) {
+        ctx.save();
+        ctx.scale(zoomLevel, zoomLevel);  // Apply zoom level to the contex
+        reachableHexes.forEach(({ hex, is_end }) => {
+            const [c, r] = hex;
+            const x = c * hexWidth * 0.75;
+            const y = r * hexHeight + (c % 2 === 0 ? 0 : hexHeight / 2);
+            drawHex(ctx, x + hexWidth / 2, y + hexHeight / 2, hexWidth / 2, is_end ? 'green' : 'yellow');
+        });
+
+        const [col, row] = startHex.hex;
+        const x = col * hexWidth * 0.75;
+        const y = row * hexHeight + (col % 2 === 0 ? 0 : hexHeight / 2);
+        drawHex(ctx, x + hexWidth / 2, y + hexHeight / 2, hexWidth / 2, 'blue');
+        ctx.restore();  // Restore the context to its original state
+    } else
+    {
+        ctx.save();
+        ctx.scale(zoomLevel, zoomLevel);  // Apply zoom level to the context
+        reachableHexes.forEach(({ hex, is_end }) => {
+            const [c, r] = hex;
+            const x = c * hexWidth * 0.75;
+            const y = r * hexHeight + (c % 2 === 0 ? 0 : hexHeight / 2);
+            drawHexOutline(ctx, x + hexWidth / 2, y + hexHeight / 2, hexWidth / 2, is_end ? 'end' : 'path');
+        });
+
+        const [col, row] = startHex.hex;
+        const x = col * hexWidth * 0.75;
+        const y = row * hexHeight + (col % 2 === 0 ? 0 : hexHeight / 2);
+        drawHexOutline(ctx, x + hexWidth / 2, y + hexHeight / 2, hexWidth / 2, 'start');
+        ctx.restore();  // Restore the context to its original state
+    }
+}
+
+function drawFiringArcHexes(reachableHexes, startHex) {
     ctx.save();
-    ctx.scale(zoomLevel, zoomLevel);  // Apply zoom level to the contex
-    reachableHexes.forEach(({ hex, is_end }) => {
+    ctx.scale(zoomLevel, zoomLevel);
+
+    reachableHexes.forEach(({ hex }) => {
         const [c, r] = hex;
         const x = c * hexWidth * 0.75;
         const y = r * hexHeight + (c % 2 === 0 ? 0 : hexHeight / 2);
-        drawHex(ctx, x + hexWidth / 2, y + hexHeight / 2, hexWidth / 2, hexFill);
-        ctx.fillStyle = '#000';
-        ctx.fillText(`(${c},${r})`, x + hexWidth / 4, y + hexHeight / 2);
-    });
-    ctx.restore();  // Restore the context to its original state
-}
-
-function drawreachableHexes(reachableHexes, startHex) {
-    ctx.save();
-    ctx.scale(zoomLevel, zoomLevel);  // Apply zoom level to the contex
-    reachableHexes.forEach(({ hex, is_end }) => {
-        const [c, r] = hex;
-        const x = c * hexWidth * 0.75;
-        const y = r * hexHeight + (c % 2 === 0 ? 0 : hexHeight / 2);
-        drawHex(ctx, x + hexWidth / 2, y + hexHeight / 2, hexWidth / 2, is_end ? 'green' : 'yellow');
+        drawHexOutline(ctx, x + hexWidth / 2, y + hexHeight / 2, hexWidth / 2, 'fire');
     });
 
-    const x = startHex.hex.col * hexWidth * 0.75;
-    const y = startHex.hex.row * hexHeight + ( startHex.hex.col % 2 === 0 ? 0 : hexHeight / 2);
-    drawHex(ctx, x + hexWidth / 2, y + hexHeight / 2, hexWidth / 2, 'blue');
-    ctx.restore();  // Restore the context to its original state
+    const [col, row] = startHex;
+    const x = col * hexWidth * 0.75;
+    const y = row * hexHeight + (col % 2 === 0 ? 0 : hexHeight / 2);
+    drawHexOutline(ctx, x + hexWidth / 2, y + hexHeight / 2, hexWidth / 2, 'start');
+
+    ctx.restore();
 }
 
-canvas.addEventListener('click', (event) => {
-    const rect = canvas.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / zoomLevel;
-    const y = (event.clientY - rect.top) / zoomLevel;
+function drawHexOutline(ctx, x, y, size, type) {
+    const vertices = generateHexVertices(size);
+    let fillColor;
+    let strokeColor;
 
-    const col = Math.floor(x / (hexWidth * 0.75));
-    const row = Math.floor((y - (col % 2 === 0 ? 0 : hexHeight / 2)) / hexHeight);
+    switch (type) {
+        case 'start':
+            fillColor = 'rgba(20, 20, 230, 0.5)'; // Light blue with transparency
+            strokeColor = 'blue';
+            break;
+        case 'end':
+            fillColor = 'rgba(144, 238, 144, 0.2)'; // Light green with transparency
+            strokeColor = 'green';
+            break;
+        case 'path':
+            fillColor = 'rgba(255, 255, 0, 0.2)';   // Light yellow with transparency
+            strokeColor = 'yellow';
+            break;
+        case 'fire':
+            fillColor = 'rgba(200, 0, 0, 0.2)';   // Light red with transparency
+            strokeColor = 'red';
+            break;
+        default:
+            fillColor = 'rgba(0, 0, 0, 1)';  //see through black
+            strokeColor = 'black';
+    }
 
-    handleHexClick(row, col);
-});
+    // Fill the hexagon with a transparent color to blend with the background
+    ctx.beginPath();
+    ctx.moveTo(x + vertices[0].x, y + vertices[0].y);
+    for (let i = 1; i < 6; i++) {
+        ctx.lineTo(x + vertices[i].x, y + vertices[i].y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = fillColor;  // Adjust the alpha value for transparency
+    ctx.fill();
+
+    // Draw the outline with a more visible stroke
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 2;  // Adjust the line width as needed
+    ctx.stroke();
+}
+
+
 
 function setZoom(newZoomLevel) {
     zoomLevel = newZoomLevel;
     canvas.width = ((gridSizeWidth * hexWidth * 0.75) + 15) * zoomLevel;
     canvas.height = ((gridSizeHeight * hexHeight) + 26) * zoomLevel;
     drawGrid();
+    if(startHex.hex)
+        {
+            drawReachableHexes(reachableHexes, startHex);
+        }
     zoomLevelDisplay.textContent = `Zoom: ${Math.round(zoomLevel * 100)}%`;
 }
 
-canvas.addEventListener('wheel', (event) => {
-    event.preventDefault();
-    const scaleAmount = 0.1;
-    if (event.deltaY < 0 && zoomLevel < 2) {
-        setZoom(zoomLevel + scaleAmount);
-    } else if (event.deltaY > 0 && zoomLevel > 0.5) {
-        setZoom(zoomLevel - scaleAmount);
-    }
+
+///////// Event Listeners //////////
+document.addEventListener('DOMContentLoaded', (event) => {
+    const modeRadios = document.querySelectorAll('input[name="mode"]');
+    const canvas = document.getElementById('hexgrid');
+
+    // Initialize mode
+    let currentMode = 'path';
+
+    // Event listener for mode change
+    modeRadios.forEach(radio => {
+        radio.addEventListener('change', (event) => {
+            currentMode = event.target.value;
+            removeReachableHexes(reachableHexes, startHex);
+            startHex = {};
+            reachableHexes = new Map();
+        });
+    });
+
+    // Event listener for canvas click
+    canvas.addEventListener('click', (event) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = (event.clientX - rect.left) / zoomLevel;
+        const y = (event.clientY - rect.top) / zoomLevel;
+
+        const col = Math.floor(x / (hexWidth * 0.75));
+        const row = Math.floor((y - (col % 2 === 0 ? 0 : hexHeight / 2)) / hexHeight);
+
+        if (currentMode === 'path') {
+            handleHexClick(row, col);  // This function should be defined in hex_path.js
+        } else if (currentMode === 'firing') {
+            handleFiringArcClick(row, col);  // This function will be defined for firing arc calculations
+        }
+    });
+
+    canvas.addEventListener('wheel', (event) => {
+        event.preventDefault();
+        const scaleAmount = 0.1;
+        if (event.deltaY < 0 && zoomLevel < 2) {
+            setZoom(zoomLevel + scaleAmount);
+        } else if (event.deltaY > 0 && zoomLevel > 0.5) {
+            setZoom(zoomLevel - scaleAmount);
+        }
+    });
+
+
+    let isScrolling;
+    viewport.addEventListener('scroll', () => {
+        clearTimeout(isScrolling);
+        isScrolling = setTimeout(() => {
+            requestAnimationFrame(drawGrid);
+        }, 66); // Roughly 15fps for debounce
+    });
+
+    createNebulas();
+    setZoom(1);
+    drawGrid();
 });
 
-const viewport = document.getElementById('canvas-container');
-let isScrolling;
-viewport.addEventListener('scroll', () => {
-    clearTimeout(isScrolling);
-    isScrolling = setTimeout(() => {
-        requestAnimationFrame(drawGrid);
-    }, 66); // Roughly 15fps for debounce
-});
-
-createNebulas();
-setZoom(1);
-drawGrid();

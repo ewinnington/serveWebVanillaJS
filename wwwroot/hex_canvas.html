@@ -39,24 +39,71 @@
 </head>
 <body>
     <div class="controls">
-        <label for="direction">Direction:</label>
-        <select id="direction">
-            <option value="0">N</option>
-            <option value="1">NE</option>
-            <option value="2">SE</option>
-            <option value="3">S</option>
-            <option value="4">SW</option>
-            <option value="5">NW</option>
-        </select>
-        <label for="speed">Speed:</label>
-        <input type="number" id="speed" min="1" max="50" value="3">
-        <label for="turn">Turn Number:</label>
-        <input type="number" id="turn" min="1" max="10" value="2">
+        <div id="path-controls">
+            <label>
+                <input type="radio" name="mode" value="path" checked> Path Calculation
+            </label>
+            <label for="direction">Direction:</label>
+            <select id="direction">
+                <option value="0">N</option>
+                <option value="1">NE</option>
+                <option value="2">SE</option>
+                <option value="3">S</option>
+                <option value="4">SW</option>
+                <option value="5">NW</option>
+            </select>
+            <label for="speed">Speed:</label>
+            <input type="number" id="speed" min="1" max="50" value="3">
+            <label for="turn">Turn Number:</label>
+            <input type="number" id="turn" min="1" max="10" value="2">
+
+            <label for="slide">Slide:</label>
+            <select id="slide">
+                <option value="none">None</option>
+                <option value="1x-slide">1x Slide</option>
+                <option value="2x-slide">2x Slide</option>
+            </select>
+
+            <label for="halfLoop">Half-Loop:</label>
+            <select id="halfLoop">
+                <option value="none">None</option>
+                <option value="1x-halfLoop">1x Half-Loop</option>
+                <option value="2x-halfLoop">2x Half-Loop</option>
+            </select>
+        </div>
+        
+        <div id="firing-controls">
+            <label>
+                <input type="radio" name="mode" value="firing"> Firing Arc Calculation
+            </label>
+            <label for="firing-direction">Direction:</label>
+            <select id="firing-direction">
+                <option value="0">N</option>
+                <option value="1">NE</option>
+                <option value="2">SE</option>
+                <option value="3">S</option>
+                <option value="4">SW</option>
+                <option value="5">NW</option>
+            </select>
+            <label for="arc">Arc:</label>
+            <select id="arc">
+                <option value="0">Forward Center</option>
+                <option value="1">Forward Right</option>
+                <option value="2">Rear Right</option>
+                <option value="3">Rear Center</option>
+                <option value="4">Rear Left</option>
+                <option value="5">Forward Left</option>
+            </select>
+            <label for="distance">Distance:</label>
+            <input type="number" id="distance" min="0" max="5" value="5">
+        </div>
+        
         <span id="zoom-level">Zoom: 100%</span>
     </div>
     <div id="canvas-container">
         <canvas id="hexgrid"></canvas>
     </div>
     <script src="/hex_js/hex_canvas.js"></script>
+    <script src="/hex_js/hex_path.js"></script>
 </body>
 </html>
