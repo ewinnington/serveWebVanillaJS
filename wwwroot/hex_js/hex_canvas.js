@@ -9,6 +9,9 @@ const gridSizeHeight = 100;
 const gridSizeWidth = 150;
 const hexHeight = 52;
 const hexWidth = 60;
+
+const hexFill = 'rgba(255, 255, 255, 0)';
+
 let zoomLevel = 1;
 
 canvas.width = gridSizeWidth * hexWidth * zoomLevel;
@@ -18,6 +21,30 @@ canvas.height = gridSizeHeight * hexHeight * zoomLevel;
 const hexCache = {};
 let reachableHexes = new Map();
 let startHex = {};
+
+const nebulaCount = 200; // Number of nebula lights
+const nebulas = [];
+
+function createNebulas() {
+    for (let i = 0; i < nebulaCount; i++) {
+        nebulas.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            radius: Math.random() * 60 + 1,
+            color: `rgba(${Math.floor(Math.random() * 256)},${Math.floor(Math.random() * 256)},${Math.floor(Math.random() * 256)},${Math.random()})`
+        });
+    }
+}
+
+function drawNebulas() {
+    nebulas.forEach(nebula => {
+        ctx.beginPath();
+        ctx.arc(nebula.x, nebula.y, nebula.radius, 0, Math.PI * 2);
+        ctx.fillStyle = nebula.color;
+        ctx.fill();
+    });
+}
+
 
 // Function to generate hexagon vertices
 function generateHexVertices(size) {
@@ -70,8 +97,14 @@ function drawGrid() {
 //Partial grid draw based on visible
 function drawGrid() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
     ctx.save();
     ctx.scale(zoomLevel, zoomLevel);
+    drawNebulas();
+    
+
 
     // Determine the visible area
     const visibleWidth = canvas.width / zoomLevel;
@@ -87,8 +120,11 @@ function drawGrid() {
         for (let col = startX; col < endX; col++) {
             const x = col * hexWidth * 0.75;
             const y = row * hexHeight + (col % 2 === 0 ? 0 : hexHeight / 2);
-            drawHex(ctx, x + hexWidth / 2, y + hexHeight / 2, hexWidth / 2, '#fff');
-            ctx.fillStyle = '#000';
+            drawHex(ctx, x + hexWidth / 2, y + hexHeight / 2, hexWidth / 2, hexFill);
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.fillStyle = 'lightgrey';
             ctx.fillText(`(${col},${row})`, x + hexWidth / 4, y + hexHeight / 2);
         }
     }
@@ -182,7 +218,7 @@ function removeReachableHexes(reachableHexes, startHex) {
         const [c, r] = hex;
         const x = c * hexWidth * 0.75;
         const y = r * hexHeight + (c % 2 === 0 ? 0 : hexHeight / 2);
-        drawHex(ctx, x + hexWidth / 2, y + hexHeight / 2, hexWidth / 2, '#fff');
+        drawHex(ctx, x + hexWidth / 2, y + hexHeight / 2, hexWidth / 2, hexFill);
         ctx.fillStyle = '#000';
         ctx.fillText(`(${c},${r})`, x + hexWidth / 4, y + hexHeight / 2);
     });
@@ -243,5 +279,6 @@ viewport.addEventListener('scroll', () => {
     }, 66); // Roughly 15fps for debounce
 });
 
+createNebulas();
 setZoom(1);
 drawGrid();
