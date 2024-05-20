@@ -4,7 +4,7 @@ let startHex = {};
 
 
 function getNeighbor(hex, direction) {
-    const directions_even = [
+    const directions_even = [ //column, row dimension data
         [0, -1],   // N
         [1, -1],   // NE
         [1, 0],    // SE
@@ -13,7 +13,7 @@ function getNeighbor(hex, direction) {
         [-1, -1]   // NW
     ];
 
-    const directions_odd = [
+    const directions_odd = [ //column, row dimension data
         [0, -1],   // N
         [1, 0],    // NE
         [1, 1],    // SE
@@ -88,31 +88,44 @@ function handleFiringArcClick(row, col) {
     drawFiringArcHexes(reachableHexes, startHex.hex);
 }
 
+function handlePatternClick(row, col) {
+    if (!startHex.hex) {
+        startHex = { hex: [col, row]};
+        const [c, r] = startHex.hex;
+        const x = c * hexWidth * 0.75;
+        const y = r * hexHeight + (c % 2 === 0 ? 0 : hexHeight / 2);
+        ctx.save();
+        ctx.scale(zoomLevel, zoomLevel);
+        drawHexOutline(ctx, x + hexWidth / 2, y + hexHeight / 2, hexWidth / 2, 'start');
+        ctx.restore();
+    } else {
+        console.log("{col: " + startHex.hex.col - col + ", row: " + startHex.hex.row - row+ "},");
+    }
+    ctx.save();
+    ctx.scale(zoomLevel, zoomLevel);
+    const c = col; const r = row;
+    const x = c * hexWidth * 0.75;
+    const y = r * hexHeight + (c % 2 === 0 ? 0 : hexHeight / 2);
+    drawHexOutline(ctx, x + hexWidth / 2, y + hexHeight / 2, hexWidth / 2, 'fire');
+    ctx.restore();
+}
+
 //axial
 const firingArcPatterns = [
-    [{q: 0, r: -1},{q: -1, r: -1},{q: +1, r: -1},{q: 0, r: -2},{q: -1, r: -2},{q: +1, r: -2},{q: 0, r: -3},{q: -1, r: -3},{q: +1, r: -3},{q: 0, r: -4},{q: -2, r: -3},{q: +2, r: -3},{q: -1, r: -4},{q: +1, r: -4},{q: 0, r: -5},{q: -2, r: -4},{q: +2, r: -4}], //"ForwardCenter": 
-    [{q: 1, r: -1}, {q: 1, r: -2}, {q: 1, r: -3}], //"ForwardRight": 
-    [{q: 1, r: 0}, {q: 1, r: 1}, {q: 1, r: 2}], //"RearRight":
-    [{q: 0, r: 1}, {q: 0, r: 2}, {q: 0, r: 3}], //"RearCenter": 
-    [{q: -1, r: 0}, {q: -1, r: 1}, {q: -1, r: 2}], //"RearLeft":
-    [{q: -1, r: -1}, {q: -1, r: -2}, {q: -1, r: -3}] //"ForwardLeft": 
+    [{col: 0, row: -1},{col: -1, row: -1},{col: +1, row: -1},{col: 0, row: -2},{col: -1, row: -2},{col: +1, row: -2},{col: 0, row: -3},{col: -1, row: -3},{col: +1, row: -3},{col: 0, row: -4},{col: -2, row: -3},{col: +2, row: -3},{col: -1, row: -4},{col: +1, row: -4},{col: 0, row: -5},{col: -2, row: -4},{col: +2, row: -4}], //"ForwardCenter":
+    [{col: 1, row: -1}, {col: 1, row: -2}, {col: 1, row: -3}], //"ForwardRight": 
+    [{col: 1, row: 0}, {col: 1, row: 1}, {col: 1, row: 2}], //"RearRight":
+    [{col: 0, row: 1},{col: 1, row: 2},{col: -1, row: 2},{col: 0, row: 2},{col: -1, row: 3},{col: 1, row: 3},{col: 0, row: 3},{col: -1, row: 4},{col: 1, row: 4},{col: 0, row: 4},{col: -2, row: 3},{col: 2, row: 3},{col: -1, row: 5},{col: 1, row: 5},{col: 0, row: 5},{col: -2, row: 4},{col: 2, row: 4}], //"RearCenter": 
+    [{col: -1, row: 0}, {col: -1, row: 1}, {col: -1, row: 2}], //"RearLeft":
+    [{col: -1, row: -1}, {col: -1, row: -2}, {col: -1, row: -3}] //"ForwardLeft": 
 ];
-
-function rotateHex(q, r, direction) {
-    for (let i = 0; i < direction; i++) {
-        const temp = q;
-        q = -r;
-        r = temp + q;
-    }
-    return {q, r};
-}
 
 function adjustForEvenColumns(pattern) {
     return pattern.map(hex => {
-        if (hex.q % 2 !== 0) {
+        if (hex.col % 2 !== 0) {
             return {
-                 q: hex.q,
-                 r: hex.r - 1
+                 col: hex.col,
+                 row: hex.row - 1
             };
         }
         return hex;
@@ -120,7 +133,12 @@ function adjustForEvenColumns(pattern) {
 }
 
 function rotatePattern(pattern, direction) {
-    return pattern.map(point => rotateHex(point.q, point.r, direction));
+    return pattern.map(hex => {
+        axial = col_row_to_axial(hex.col, hex.row); 
+        axial = axial_rotate_by_direction(axial.q, axial.r, direction);
+        hex = axial_to_col_row(axial.q, axial.r);
+        return hex; 
+    });
 }
 
 function calculateFiringArc(startHex, direction, arc, distance) {
@@ -133,7 +151,7 @@ function calculateFiringArc(startHex, direction, arc, distance) {
 
     for (let point of pattern) {
         //for (let step = 1; step <= distance; step++) {
-            const targetHex = [startHex[0] + point.q, startHex[1] + point.r];
+            const targetHex = [startHex[0] + point.col, startHex[1] + point.row];
             if (isValidHex(targetHex)) {
                 reachableHexes.set(`${targetHex[0]},${targetHex[1]}`, { hex: targetHex, is_end: true });
             }
@@ -160,3 +178,33 @@ function isValidHex(hex) {
     return hex[1] >= 0 && hex[1] < gridSizeHeight && hex[0] >= 0 && hex[0] < gridSizeWidth;
 }
 
+
+function col_row_to_axial(col, row) {
+    q = col;
+    r = row - Math.floor(col / 2);
+    return {q, r};
+}
+
+function axial_rotate_by_direction(q, r, direction) {
+    // N => function (q,r)→(q,r)
+    // NE => function (q,r)→(−r,q+r)
+    // SE => function (q,r)→(−q−r,q)
+    // S => function (q,r)→(−q,−r) 
+    // SW => function (q,r)→(r,−q-r)
+    // NW => function (q,r)→(q+r,−q)
+
+    switch(direction) {
+        case 0: return { q, r };
+        case 1: return { q: -r, r: q + r };
+        case 2: return { q: -q - r, r: q };
+        case 3: return { q: -q, r: -r };
+        case 4: return { q: r, r: -q - r };
+        case 5: return { q: q + r, r: -q };
+    }
+}
+
+function axial_to_col_row(q,r){
+    col = q; 
+    row = r + Math.floor(q / 2);
+    return {col, row};
+}

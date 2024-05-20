@@ -281,6 +281,8 @@ document.addEventListener('DOMContentLoaded', (event) => {
             handleHexClick(row, col);  // This function should be defined in hex_path.js
         } else if (currentMode === 'firing') {
             handleFiringArcClick(row, col);  // This function will be defined for firing arc calculations
+        } else if (currentMode === 'pattern') {
+            handlePatternClick(row, col);  // This function will be defined for distance calculations
         }
     });
 
@@ -307,4 +309,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
     setZoom(1);
     drawGrid();
 });
+
+
 
